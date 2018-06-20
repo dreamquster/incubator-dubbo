@@ -19,10 +19,23 @@ package org.apache.dubbo.demo.consumer;
 import org.apache.dubbo.demo.DemoService;
 
 import org.springframework.context.support.ClassPathXmlApplicationContext;
+import sun.net.util.IPAddressUtil;
 
 public class Consumer {
 
+    public static int intOfIpV4(String ip) {
+        int result = 0;
+        byte[] bytes = IPAddressUtil.textToNumericFormatV4(ip);
+        if (bytes == null) {
+            return result;
+        }
+        for (byte b : bytes) {
+            result = result << 8 | (b & 0xFF);
+        }
+        return result;
+    }
     public static void main(String[] args) {
+        int i = intOfIpV4("192.168.0.104");;
         //Prevent to get IPV6 address,this way only work in debug mode
         //But you can pass use -Djava.net.preferIPv4Stack=true,then it work well whether in debug mode or not
         System.setProperty("java.net.preferIPv4Stack", "true");
