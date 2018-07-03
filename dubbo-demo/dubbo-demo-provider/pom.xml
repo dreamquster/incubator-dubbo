@@ -45,6 +45,10 @@
         </dependency>
         <dependency>
             <groupId>com.alibaba</groupId>
+            <artifactId>dubbo-registry-eureka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba</groupId>
             <artifactId>dubbo-registry-multicast</artifactId>
         </dependency>
         <dependency>

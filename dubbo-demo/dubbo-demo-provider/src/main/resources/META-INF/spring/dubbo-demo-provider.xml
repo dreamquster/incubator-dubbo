@@ -25,7 +25,10 @@
     <dubbo:application name="demo-provider"/>
 
     <!-- use multicast registry center to export service -->
-    <dubbo:registry address="multicast://224.5.6.7:1234"/>
+    <!--<dubbo:registry address="multicast://224.5.6.7:1234"/>-->
+    <!--<dubbo:registry address="zookeeper://192.168.99.100:2181/?client=zkclient"/>-->
+
+    <dubbo:registry id="eureka-registry" address="eureka://192.168.99.100:8761" default="true"/>
 
     <!-- use dubbo protocol to export service on port 20880 -->
     <dubbo:protocol name="dubbo" port="20880"/>
@@ -33,7 +36,11 @@
     <!-- service implementation, as same as regular local bean -->
     <bean id="demoService" class="org.apache.dubbo.demo.provider.DemoServiceImpl"/>
 
+    <bean id="walletService" class="org.apache.dubbo.demo.provider.WalletServiceImpl"/>
+
     <!-- declare the service interface to be exported -->
     <dubbo:service interface="org.apache.dubbo.demo.DemoService" ref="demoService"/>
+
+    <dubbo:service interface="org.apache.dubbo.demo.WalletService" ref="walletService"/>
 
 </beans>
