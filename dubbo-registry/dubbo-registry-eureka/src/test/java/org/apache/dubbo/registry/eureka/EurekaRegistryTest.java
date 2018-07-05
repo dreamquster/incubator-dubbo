@@ -15,8 +15,11 @@ public class EurekaRegistryTest {
         params.put(Constants.INTERFACE_KEY, "org.apache.service.EurekaProvider");
         params.put(Constants.APPLICATION_KEY, "eureka-dubbo-test");
         URL url = new URL("eureka", "192.168.99.100",  8761, params);
-
-//        url = url.setServiceInterface("org.apache.service.EurekaProvider");
         EurekaRegistry eurekaRegistry = new EurekaRegistry(url);
+    }
+
+    @Test
+    public void fetchChangedUrlsTest() {
+
     }
 }

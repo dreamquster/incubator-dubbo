@@ -26,9 +26,9 @@
 
     <!-- use multicast registry center to export service -->
     <!--<dubbo:registry address="multicast://224.5.6.7:1234"/>-->
-    <!--<dubbo:registry address="zookeeper://192.168.99.100:2181/?client=zkclient"/>-->
+    <dubbo:registry address="redis://10.150.20.86:6379"/>
 
-    <dubbo:registry id="eureka-registry" address="eureka://192.168.99.100:8761" default="true"/>
+    <dubbo:registry id="eureka-registry" address="eureka://192.168.1.103:8761" default="true"/>
 
     <!-- use dubbo protocol to export service on port 20880 -->
     <dubbo:protocol name="dubbo" port="20880"/>

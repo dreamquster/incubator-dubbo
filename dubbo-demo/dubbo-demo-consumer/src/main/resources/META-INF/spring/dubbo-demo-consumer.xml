@@ -26,7 +26,9 @@
     <dubbo:application name="demo-consumer"/>
 
     <!-- use multicast registry center to discover service -->
-    <dubbo:registry address="multicast://224.5.6.7:1234"/>
+    <dubbo:registry address="redis://10.150.20.86:6379"/>
+
+    <dubbo:registry id="eureka-registry" address="eureka://192.168.1.103:8761" default="true"/>
 
     <!-- generate proxy for the remote service, then demoService can be used in the same way as the
     local regular interface -->
