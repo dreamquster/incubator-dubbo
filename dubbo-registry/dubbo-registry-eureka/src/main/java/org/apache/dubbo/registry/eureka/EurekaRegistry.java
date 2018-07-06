@@ -10,7 +10,6 @@ import com.netflix.discovery.EurekaEventListener;
 import com.netflix.discovery.StatusChangeEvent;
 import org.apache.dubbo.common.Constants;
 import org.apache.dubbo.common.URL;
-import org.apache.dubbo.common.utils.ConcurrentHashSet;
 import org.apache.dubbo.common.utils.UrlUtils;
 import org.apache.dubbo.registry.NotifyListener;
 import org.apache.dubbo.registry.support.FailbackRegistry;
@@ -18,13 +17,12 @@ import org.apache.dubbo.rpc.RpcException;
 
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by dknight on 2018/6/20.
@@ -46,21 +44,15 @@ public class EurekaRegistry extends FailbackRegistry{
 
     private final ApplicationInfoManager applicationInfoManager;
 
-    private final Set<String> subscribedVipName = new ConcurrentHashSet<>();
-
-    private final Map<String, Long> servicesCache = new ConcurrentHashMap<>();
-
-    private final Map<String, InstanceServiceMap<String, Long>> instancesCache = new ConcurrentHashMap<>();
-
-    private final Map<InstanceServiceKey, InstanceServiceMap<String, Long>> instanceServicesCache = new ConcurrentHashMap<>();
-
     private final boolean isUseSecure = false;
+
+    private final EurekaClientCacheWrapper eurekaClientCacheWrapper;
 
     private final EurekaEventListener cacheRefreshListener = new EurekaEventListener() {
         @Override
         public void onEvent(EurekaEvent event) {
             if (event instanceof CacheRefreshedEvent) {
-                List<URL> changedUrls = collectChangedUrls();
+                List<URL> changedUrls = eurekaClientCacheWrapper.collectChangedUrls();
                 doNotify(changedUrls);
             } else if (event instanceof StatusChangeEvent) {
 
@@ -68,41 +60,7 @@ public class EurekaRegistry extends FailbackRegistry{
         }
     };
 
-    private final List<URL> collectChangedUrls() {
-        List<URL> changedUrls = new LinkedList<>();
-//        List<String> subscribedVipName = instanceServicesCache.keySet().stream().
-//                map(s -> s.getVipAddress()).collect(Collectors.toList());
-        for (String vipAddress: subscribedVipName) {
-            List<InstanceInfo> instanceInfos =  discoveryClient.getInstancesByVipAddress(vipAddress, isUseSecure);
-            for (InstanceInfo instanceInfo : instanceInfos) {
-                String instanceId = instanceInfo.getInstanceId();
-                InstanceServiceMap<String, Long> serviceMap = instancesCache.get(instanceId);
-                if (null == serviceMap) {
-                    instancesCache.putIfAbsent(instanceId, new InstanceServiceMap<>(0L));
-                    serviceMap = instancesCache.get(instanceId);
-                }
-                Long  localDirtyTime = serviceMap.getLastUpdatedTime();
-                if (localDirtyTime < instanceInfo.getLastDirtyTimestamp()) {
-                    serviceMap.setLastUpdatedTime(instanceInfo.getLastDirtyTimestamp());
-                    for (Map.Entry<String, Long> serviceEntry: serviceMap.entrySet()) {
-                        String serviceUrl = instanceInfo.getMetadata().get(serviceEntry.getKey());
-                        if (null == serviceUrl) {
-                            servicesCache.remove(serviceEntry.getKey());
-                        } else {
-                            URL url = URL.valueOf(serviceUrl);
-                            Long providerTimestamp = url.getParameter(Constants.TIMESTAMP_KEY, 0L);
-                            Long lastListenedTime = serviceEntry.getValue();
-                            if (lastListenedTime < providerTimestamp) {
-                                servicesCache.put(serviceEntry.getKey(), providerTimestamp);
-                                changedUrls.add(url);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        return changedUrls;
-    }
+
 
     private void doNotify(List<URL> changedUrls) {
         for (Map.Entry<URL, Set<NotifyListener>> entry : new HashMap<URL, Set<NotifyListener>>(getSubscribed()).entrySet()) {
@@ -142,6 +100,7 @@ public class EurekaRegistry extends FailbackRegistry{
         applicationInfoManager = new ApplicationInfoManager(eurekaInstanceConfig, instanceInfo);
         discoveryClient = new DiscoveryClient(applicationInfoManager, clientConfig);
         discoveryClient.registerEventListener(cacheRefreshListener);
+        eurekaClientCacheWrapper = new EurekaClientCacheWrapper(discoveryClient);
 
     }
 
@@ -176,7 +135,6 @@ public class EurekaRegistry extends FailbackRegistry{
 
     @Override
     protected void doSubscribe(URL url, NotifyListener listener) {
-        logger.info("configurator listener");
         String appName = url.getParameter(Constants.APPLICATION_KEY);
         String interfaceCls = url.getServiceInterface();
         if (null == appName) {
@@ -184,30 +142,21 @@ public class EurekaRegistry extends FailbackRegistry{
                     String.format("applicaton can not be null when consumer " +
                             "subscribe a service[%s] from eureka!", interfaceCls));
         }
-        List<String> appInstanceIds = new LinkedList<>();
-        if (!subscribedVipName.contains(appName)) {
-            subscribedVipName.add(appName);
 
-        }
-        String[] categories = url.getParameter(Constants.CONFIGURATORS_CATEGORY, new String[0]);
-        List<InstanceInfo> instanceInfos = discoveryClient.getInstancesByVipAddress(appName, isUseSecure);
-        for (InstanceInfo instanceInfo: instanceInfos) {
-            String instanceId = instanceInfo.getInstanceId();
-            appInstanceIds.add(instanceId);
-            instancesCache.putIfAbsent(instanceId, new InstanceServiceMap<>(0L));
-            InstanceServiceMap<String, Long> instanceServiceMap = instancesCache.get(instanceId);
-            for (String category: categories) {
-                instanceServiceMap.putIfAbsent(interfaceCls + Constants.PATH_SEPARATOR + category, 0L);
-            }
-        }
-
-
+        eurekaClientCacheWrapper.doSubscribe(url, appName, interfaceCls);
 
     }
 
     @Override
     protected void doUnsubscribe(URL url, NotifyListener listener) {
-
+        String appName = url.getParameter(Constants.APPLICATION_KEY);
+        String interfaceCls = url.getServiceInterface();
+        if (null == appName) {
+            throw new RpcException(
+                    String.format("applicaton can not be null when consumer " +
+                            "unsubscribe a service[%s] from eureka!", interfaceCls));
+        }
+        eurekaClientCacheWrapper.doUnsubscribe(url, appName, interfaceCls);
     }
     // todo: judge whether eureka is alive
     @Override
