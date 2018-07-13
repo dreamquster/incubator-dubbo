@@ -32,6 +32,11 @@ public class EurekaClientConfiguration extends DefaultEurekaClientConfig {
         return zoneUrls;
     }
 
+    @Override
+    public boolean shouldDisableDelta() {
+        return false;
+    }
+
     public void setEurekaServerServiceUrls(String myZone, List<String> serviceUrls) {
         zoneServiceUrls.put(myZone, serviceUrls);
     }

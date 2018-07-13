@@ -63,6 +63,9 @@ public class EurekaRegistry extends FailbackRegistry{
 
 
     private void doNotify(List<URL> changedUrls) {
+        if (changedUrls.isEmpty()) {
+            return;
+        }
         for (Map.Entry<URL, Set<NotifyListener>> entry : new HashMap<URL, Set<NotifyListener>>(getSubscribed()).entrySet()) {
             URL consumerUrl = entry.getKey();
             List<URL> changedProviderUrls = new LinkedList<>();
@@ -71,8 +74,10 @@ public class EurekaRegistry extends FailbackRegistry{
                     changedProviderUrls.add(providerUrl);
                 }
             }
-            for (NotifyListener listener: entry.getValue()) {
-                doNotify(consumerUrl, listener , changedUrls);
+            if (!changedProviderUrls.isEmpty()) {
+                for (NotifyListener listener: entry.getValue()) {
+                    doNotify(consumerUrl, listener , changedProviderUrls);
+                }
             }
         }
     }
@@ -87,6 +92,7 @@ public class EurekaRegistry extends FailbackRegistry{
         this.registryUrl = url;
         EurekaClientConfiguration clientConfig =  new EurekaClientConfiguration();
         clientConfig.setEurekaServerServiceUrls(EurekaClientConfiguration.DEFAULT_ZONE, Arrays.asList(defaultServiceUrl));
+
         Map<String, String> metadata = new HashMap<>();
         metadata.put("dubbo-registry", url.toString());
         DubboIntanceConfig eurekaInstanceConfig = new DubboIntanceConfig();
@@ -116,6 +122,9 @@ public class EurekaRegistry extends FailbackRegistry{
     @Override
     protected void doRegister(URL url) {
         String key = toCategoryPath(url);
+        if (null == url.getParameter(Constants.TIMESTAMP_KEY)) {
+            url.addParameter(Constants.TIMESTAMP_KEY, System.currentTimeMillis());
+        }
         Map<String, String> metadata = applicationInfoManager.getInfo().getMetadata();
         metadata.put(key, url.toString());
     }
@@ -135,8 +144,12 @@ public class EurekaRegistry extends FailbackRegistry{
 
     @Override
     protected void doSubscribe(URL url, NotifyListener listener) {
-        String appName = url.getParameter(Constants.APPLICATION_KEY);
+        String appName = url.getParameter(Constants.PROVIDER_APP_KEY);
         String interfaceCls = url.getServiceInterface();
+        if (null == appName && Constants.PROVIDER.equals(url.getProtocol())) {
+            appName = registryUrl.getParameter(Constants.APPLICATION_KEY);
+        }
+
         if (null == appName) {
             throw new RpcException(
                     String.format("applicaton can not be null when consumer " +
@@ -144,12 +157,13 @@ public class EurekaRegistry extends FailbackRegistry{
         }
 
         eurekaClientCacheWrapper.doSubscribe(url, appName, interfaceCls);
-
+        List<URL> changedUrls = eurekaClientCacheWrapper.collectChangedUrls(true);
+        doNotify(changedUrls);
     }
 
     @Override
     protected void doUnsubscribe(URL url, NotifyListener listener) {
-        String appName = url.getParameter(Constants.APPLICATION_KEY);
+        String appName = url.getParameter(Constants.PROVIDER_APP_KEY);
         String interfaceCls = url.getServiceInterface();
         if (null == appName) {
             throw new RpcException(
