@@ -47,6 +47,16 @@ public class ReferenceBean<T> extends ReferenceConfig<T> implements FactoryBean,
 
     private transient ApplicationContext applicationContext;
 
+    private String providerapp;
+
+    public String getProviderapp() {
+        return providerapp;
+    }
+
+    public void setProviderapp(String providerapp) {
+        this.providerapp = providerapp;
+    }
+
     public ReferenceBean() {
         super();
     }
