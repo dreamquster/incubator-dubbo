@@ -35,6 +35,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Proxy;
 import java.util.Map;
 
 import static org.apache.dubbo.remoting.Constants.SERVER_KEY;
@@ -258,4 +259,23 @@ public class RestProtocolTest {
         invoker.destroy();
         exporter.unexport();
     }
+
+    @Test
+    public void testJdkProxyPureServiceHello() {
+        URL url = URL.valueOf("rest://127.0.0.1:5342/rest/say?version=1.0.0&interface=org.apache.dubbo.rpc.protocol.rest.PureService").addParameter("application","consumer");
+        ForwardInvocationHandler invocationHandler = new ForwardInvocationHandler(new PureServiceImpl());
+        PureService server = (PureService) Proxy.newProxyInstance(this.getClass().getClassLoader(), new Class[]{ PureService.class }, invocationHandler);
+        ProviderModel providerModel = new ProviderModel(url.getPathKey(), server, PureService.class);
+        ApplicationModel.initProviderModel(url.getPathKey(), providerModel);
+
+        Exporter<PureService> exporter = protocol.export(proxy.getInvoker(server, PureService.class, url));
+        Invoker<PureService> invoker = protocol.refer(PureService.class, url);
+
+        PureService client = proxy.getProxy(invoker);
+        String result = client.hello("world");
+        Assertions.assertEquals("hello world", result);
+        invoker.destroy();
+        exporter.unexport();
+    }
+
 }
