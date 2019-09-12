@@ -453,7 +453,7 @@ public class ServiceConfig<T> extends AbstractServiceConfig {
         List<URL> registryURLs = loadRegistries(true);
         for (ProtocolConfig protocolConfig : protocols) {
             String pathKey = URL.buildKey(getContextPath(protocolConfig).map(p -> p + "/" + path).orElse(path), group, version);
-            ProviderModel providerModel = new ProviderModel(pathKey, ref, interfaceClass);
+            ProviderModel providerModel = new ProviderModel(pathKey, ref, interfaceClass, getServiceClass(ref));
             ApplicationModel.initProviderModel(pathKey, providerModel);
             doExportUrlsFor1Protocol(protocolConfig, registryURLs);
         }

@@ -29,16 +29,25 @@ import java.util.Map;
 public class ProviderModel {
     private final String serviceName;
     private final Object serviceInstance;
+    private final Class<?> serviceInstanceClass;
     private final Class<?> serviceInterfaceClass;
     private final Map<String, List<ProviderMethodModel>> methods = new HashMap<String, List<ProviderMethodModel>>();
 
-    public ProviderModel(String serviceName, Object serviceInstance, Class<?> serviceInterfaceClass) {
+    public ProviderModel(String serviceName, Object serviceInstance,
+                         Class<?> serviceInterfaceClass) {
+        this(serviceName, serviceInstance, serviceInterfaceClass, serviceInstance.getClass());
+    }
+
+    public ProviderModel(String serviceName, Object serviceInstance,
+                         Class<?> serviceInterfaceClass,
+                         Class<?> serviceInstanceClass) {
         if (null == serviceInstance) {
             throw new IllegalArgumentException("Service[" + serviceName + "]Target is NULL.");
         }
 
         this.serviceName = serviceName;
         this.serviceInstance = serviceInstance;
+        this.serviceInstanceClass = serviceInstanceClass;
         this.serviceInterfaceClass = serviceInterfaceClass;
 
         initMethod();
@@ -55,6 +64,10 @@ public class ProviderModel {
 
     public Object getServiceInstance() {
         return serviceInstance;
+    }
+
+    public Class<?> getServiceInstanceClass() {
+        return serviceInstanceClass;
     }
 
     public List<ProviderMethodModel> getAllMethods() {

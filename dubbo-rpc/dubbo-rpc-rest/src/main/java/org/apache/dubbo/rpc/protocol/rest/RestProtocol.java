@@ -24,7 +24,6 @@ import org.apache.dubbo.remoting.http.servlet.ServletManager;
 import org.apache.dubbo.rpc.RpcException;
 import org.apache.dubbo.rpc.model.ApplicationModel;
 import org.apache.dubbo.rpc.protocol.AbstractProxyProtocol;
-
 import org.apache.http.HeaderElement;
 import org.apache.http.HeaderElementIterator;
 import org.apache.http.client.config.RequestConfig;
@@ -96,7 +95,7 @@ public class RestProtocol extends AbstractProxyProtocol {
     @Override
     protected <T> Runnable doExport(T impl, Class<T> type, URL url) throws RpcException {
         String addr = getAddr(url);
-        Class implClass = ApplicationModel.getProviderModel(url.getPathKey()).getServiceInstance().getClass();
+        Class implClass = ApplicationModel.getProviderModel(url.getPathKey()).getServiceInstanceClass();
         RestServer server = servers.computeIfAbsent(addr, restServer -> {
             RestServer s = serverFactory.createServer(url.getParameter(SERVER_KEY, DEFAULT_SERVER));
             s.start(url);

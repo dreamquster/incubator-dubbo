@@ -17,9 +17,11 @@
 package org.apache.dubbo.config.spring;
 
 import org.apache.dubbo.config.annotation.Service;
-
 import org.hamcrest.MatcherAssert;
+import org.junit.Assert;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.framework.AdvisedSupport;
+import org.springframework.aop.framework.DefaultAopProxyFactory;
 
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.CoreMatchers.nullValue;
@@ -37,5 +39,22 @@ public class ServiceBeanTest {
 
     abstract class TestService implements Service {
 
+    }
+    interface DemoService {
+
+    }
+    class DemoServiceImpl implements DemoService {
+
+    }
+
+    @Test
+    public void getServiceClass() {
+        AdvisedSupport advisedSupport = new AdvisedSupport();
+        advisedSupport.setInterfaces(DemoService.class);
+        advisedSupport.setTargetClass(DemoServiceImpl.class);
+        DefaultAopProxyFactory aopProxyFactory = new DefaultAopProxyFactory();
+        DemoService demoService = (DemoService)aopProxyFactory.createAopProxy(advisedSupport).getProxy();
+        ServiceBean serviceBean = new ServiceBean();
+        Assert.assertEquals(DemoServiceImpl.class, serviceBean.getServiceClass(demoService));
     }
 }
